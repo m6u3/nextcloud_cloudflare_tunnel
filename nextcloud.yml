@@ -1,0 +1,62 @@
+services:
+  #########################
+  # NextCloud             #
+  #########################
+  nextcloud:
+    image: lscr.io/linuxserver/nextcloud:latest
+    container_name: nextcloud
+    networks:
+      - nextcloud_network
+    depends_on:
+      - nextcloud-mariadb
+    environment:
+      - PUID=${DOCKER_USER_PUID}               #Change to your user PUID
+      - PGID=${DOCKER_USER_PGID}               #Change to your user PGID
+      - TZ=${TZ_NY}     #Change to your timezone
+    volumes:
+      - ${PATH_TO_APPDATA}/nextcloud/config:/config
+      - ${PATH_TO_DATA}/nextcloud/data:/data
+      - ${PATH_TO_DATA}/storage-data:/mnt/personal
+    ports:
+      - 443:443
+      - 80:80
+    restart: unless-stopped
+
+  #########################
+  # DataBase              #
+  #########################
+  nextcloud-mariadb: 
+    image: mariadb:11.8
+    container_name: nextcloud-mariadb
+    networks:
+      - nextcloud_network
+    environment:
+      - PUID=${DOCKER_USER_PUID}
+      - PGID=${DOCKER_USER_PGID}
+      - TZ=${TZ_NY}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE={NEXTCLOUD_DB}
+      - MYSQL_USER={DB_USER)
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ${PATH_TO_APPDATA}/mariadb/data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    restart: unless-stopped
+    
+  #########################
+  # Cloudflared           #
+  #########################
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    command: "tunnel --no-autoupdate run"
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - nextcloud_network
+
+networks:
+  nextcloud_network:
+    name: nextcloud_network
